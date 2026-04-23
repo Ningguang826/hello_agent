@@ -20,9 +20,20 @@ from autogen_agentchat.ui import Console
 def create_openai_model_client():
     """创建 OpenAI 模型客户端用于测试"""
     return OpenAIChatCompletionClient(
-        model=os.getenv("LLM_MODEL_ID", "gpt-4o"),
+        model=os.getenv("LLM_MODEL_ID"),
         api_key=os.getenv("LLM_API_KEY"),
-        base_url=os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
+        base_url=os.getenv("LLM_BASE_URL"),
+        timeout=float(os.getenv("LLM_TIMEOUT", "60")),
+        max_retries=3,                    
+        # include_name_in_message=False,    # 很关键，先关掉
+ 
+        model_info={
+                    "vision": True,                  #  支持图像理解
+                    "function_calling": True,        #  支持工具调用
+                    "json_output": True,             # 支持 JSON 格式输出
+                    "family": "gpt-4",                # 模型家族
+                    "structured_output": True        # 支持结构化输出
+                }
     )
 
 def create_product_manager(model_client):
@@ -114,16 +125,14 @@ def create_user_proxy():
     )
 
 async def run_software_development_team():
-    """运行软件开发团队协作"""
-    
     print("🔧 正在初始化模型客户端...")
     
     # 先使用标准的 OpenAI 客户端测试
     model_client = create_openai_model_client()
     
-    print("👥 正在创建智能体团队...")
+    print("👥 正在创建agent团队...")
     
-    # 创建智能体团队
+    # 创建agent团队
     product_manager = create_product_manager(model_client)
     engineer = create_engineer(model_client)
     code_reviewer = create_code_reviewer(model_client)
@@ -158,7 +167,8 @@ async def run_software_development_team():
 - 添加适当的错误处理和加载状态
 
 请团队协作完成这个任务，从需求分析到最终实现。
-zui"""
+最终生成的代码应该能够直接运行，并满足上述功能和技术要求,名称为app.py。
+""" 
     
     # 执行团队协作
     print("🚀 启动 AutoGen 软件开发团队协作...")

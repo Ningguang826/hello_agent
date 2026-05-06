@@ -83,6 +83,7 @@ def understand_query_node(state: SearchState) -> SearchState:
         "search_query": search_query,
         "step": "understood",
         "messages": [AIMessage(content=f"我理解您的需求：{response.content}")]
+        # AIMessage = AI 说的话,是 LangChain 内置的标准消息类型
     }
 
 def tavily_search_node(state: SearchState) -> SearchState:
@@ -244,16 +245,40 @@ async def main():
         
         try:
             print("\n" + "="*60)
-            # 异步执行工作流
+            # 异步执行工作流   astream 为 LangGraph 工作流的异步流式执行器
             async for output in app.astream(initial_state, config=config):
-                for node_name, node_output in output.items():
+                for node_name, node_output in output.items(): # node_name 是自定义的节点名，node_output结构就是前面定义的 SearchState 结构
+                    '''
+                    {
+                        "understand": {
+                            "messages": [...],
+                            "search_query": "...",
+                            "step": "understood"
+                        }
+                    }
+                    '''
+
                     if "messages" in node_output and node_output["messages"]:
                         latest_message = node_output["messages"][-1]
+                        # 因为message定义messages: Annotated[list, add_messages]，自动追加新消息
+                        # 整个工作流的对话历史
+                        # messages = [
+                        # HumanMessage(content="什么是拖延症？"),   # 用户输入
+                        # AIMessage(content="我理解了你的问题..."), # 理解节点加的
+                        # AIMessage(content="搜索完成..."),        # 搜索节点加的
+                        # AIMessage(content="最终答案是...")       # 回答节点加的
+                        # ]       
                         if isinstance(latest_message, AIMessage):
                             if node_name == "understand":
                                 print(f"🧠 理解阶段: {latest_message.content}")
                             elif node_name == "search":
                                 print(f"🔍 搜索阶段: {latest_message.content}")
+
+                                '''
+                                节点2的search函数中最终返回的AIMessage的内容是 "✅ 搜索完成！找到了相关信息，正在为您整理答案..." 或 "❌ 搜索遇到问题，我将基于已有知识为您回答"
+                                但在函数开头就会打印 "🔍 正在搜索: {search_query}"，这部分内容并不属于messages列表中的AIMessage，而是直接在函数内打印的，所以不会跟在🔍搜索阶段:，而是在前面。
+                                '''
+
                             elif node_name == "answer":
                                 print(f"\n💡 最终回答:\n{latest_message.content}")
             

@@ -46,6 +46,7 @@ class MySimpleAgent(SimpleAgent):
         # 如果没有启用工具调用，使用简单对话逻辑
         if not self.enable_tool_calling:
             response = self.llm.invoke(messages, **kwargs)
+            ##agent.py 中的 add_message() 方法，负责将信息保存到self._history中
             self.add_message(Message(input_text, "user"))
             self.add_message(Message(response, "assistant"))
             print(f"✅ {self.name} 响应完成")
@@ -111,12 +112,14 @@ class MySimpleAgent(SimpleAgent):
 
                 current_iteration += 1
                 continue
+            ##工具调用过程中都是对message操作，与final_response无关
 
             # 没有工具调用，这是最终回答
             final_response = response
             break
 
         # 如果超过最大迭代次数，获取最后一次回答
+        # 工具调用次数用完了，但 AI 还想继续调用工具，这时候必须强行让它停止调用工具，并给出最终回答！
         if current_iteration >= max_tool_iterations and not final_response:
             final_response = self.llm.invoke(messages, **kwargs)
 
@@ -130,6 +133,10 @@ class MySimpleAgent(SimpleAgent):
     def _parse_tool_calls(self, text: str) -> list:
         """解析文本中的工具调用"""
         pattern = r'\[TOOL_CALL:([^:]+):([^\]]+)\]'
+        # 精准匹配 [TOOL_CALL:工具名:参数]
+        # [^:] = 匹配除了冒号 : 以外的任意字符 ； + = 匹配一个或多个（不能为空）
+        # 合起来意思： 一直读，直到碰到冒号为止，前面所有内容 = 工具名
+        # [^\]] = 匹配除了 ] 以外的任意字符
         matches = re.findall(pattern, text)
 
         tool_calls = []
@@ -213,9 +220,9 @@ class MySimpleAgent(SimpleAgent):
         full_response = ""
         print("📝 实时响应: ", end="")
         for chunk in self.llm.stream_invoke(messages, **kwargs):
-            full_response += chunk
-            print(chunk, end="", flush=True)
-            yield chunk
+            full_response += chunk # 把小块拼起来，存完整结果
+            print(chunk, end="", flush=True) # 实时打印，不换行
+            yield chunk # ← 核心：把小块“抛出去”，传给外面的调用者
 
         print()  # 换行
 

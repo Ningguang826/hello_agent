@@ -50,26 +50,22 @@ class MyPlanAndSolveAgent(Agent):
         config: Optional[Config] = None,
         planner_prompt: Optional[str] = None,
         executor_prompt: Optional[str] = None,
+        custom_prompts: Optional[Dict[str, str]] = None,  # 新增：字典方式传入自定义提示词
         verbose: bool = True
     ):
         super().__init__(name, llm, system_prompt, config)
-
-        self.planner_prompt = (
-            planner_prompt
-            if planner_prompt
-            else DEFAULT_PLANNER_PROMPT
-        )
-
-        self.executor_prompt = (
-            executor_prompt
-            if executor_prompt
-            else DEFAULT_EXECUTOR_PROMPT
-        )
-
+        # 优先级：custom_prompts > 单独参数 > 默认提示词
+        if custom_prompts:
+            self.planner_prompt = custom_prompts.get('planner', DEFAULT_PLANNER_PROMPT)
+            self.executor_prompt = custom_prompts.get('executor', DEFAULT_EXECUTOR_PROMPT)
+        else:
+            self.planner_prompt = planner_prompt if planner_prompt else DEFAULT_PLANNER_PROMPT
+            self.executor_prompt = executor_prompt if executor_prompt else DEFAULT_EXECUTOR_PROMPT
+        
         self.verbose = verbose
-
         print(f"✅ {name} 初始化完成")
 
+        
     def run(self, input_text: str, **kwargs) -> str:
         """
         执行 Plan-and-Solve 流程
@@ -230,6 +226,5 @@ class MyPlanAndSolveAgent(Agent):
         """
         日志输出
         """
-
         if self.verbose:
             print(message)
